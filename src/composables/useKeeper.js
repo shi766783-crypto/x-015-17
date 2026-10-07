@@ -1,11 +1,14 @@
 import { computed, reactive } from 'vue'
 import { createStorage } from '../services/storage'
-import { config, seed } from '../data'
+import { config, normalizeCookStatus, seed } from '../data'
 
 const storage = createStorage(config.storageKey, seed)
 export function useKeeper() {
   const state = reactive(storage.read())
   const persist = () => storage.write(state)
+  let migrated = false
+  state.usages.forEach((entry) => { const status = normalizeCookStatus(entry.status); if (status !== entry.status) { entry.status = status; migrated = true } })
+  if (migrated) persist()
   const add = (collection, item) => { state[collection].unshift({ id: `${collection}-${Date.now()}`, createdAt: new Date().toISOString(), ...item }); persist() }
   const update = (collection, id, patch) => { const item = state[collection].find((entry) => entry.id === id); if (item) Object.assign(item, patch); persist() }
   const remove = (collection, id) => { state[collection] = state[collection].filter((entry) => entry.id !== id); persist() }
